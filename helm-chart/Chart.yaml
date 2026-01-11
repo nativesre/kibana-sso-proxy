@@ -1,0 +1,28 @@
+apiVersion: v2
+name: kibana-sso-proxy
+description: |
+  A Helm chart for Kibana SSO Proxy - enables SSO authentication for Kibana
+  using any OIDC-compliant identity provider (Keycloak, Azure AD, GitHub, etc.)
+
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - kibana
+  - sso
+  - oauth
+  - oidc
+  - keycloak
+  - azure-ad
+  - github
+  - elasticsearch
+  - authentication
+
+home: https://github.com/nativesre/kibana-sso-proxy
+sources:
+  - https://github.com/nativesre/kibana-sso-proxy
+
+maintainers:
+  - name: Your Name
+    email: your.email@example.com

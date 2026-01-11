@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  # ==========================================================================
+  # Lint and validate
+  # ==========================================================================
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black isort mypy
+
+      - name: Check formatting with Black
+        run: black --check --diff .
+        continue-on-error: true
+
+      - name: Check imports with isort
+        run: isort --check --diff .
+        continue-on-error: true
+
+      - name: Type check with mypy
+        run: mypy --ignore-missing-imports --no-error-summary .
+        continue-on-error: true
+
+  # ==========================================================================
+  # Validate Helm chart
+  # ==========================================================================
+  helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.13.0
+
+      - name: Lint Helm Chart
+        run: helm lint helm-chart
+
+      - name: Template Helm Chart
+        run: |
+          helm template test-release helm-chart \
+            --set config.OIDC_CLIENT_ID=test \
+            --set secrets.OIDC_CLIENT_SECRET=test \
+            --set secrets.ES_ADMIN_PASSWORD=test \
+            --set secrets.SESSION_SECRET=test
+
+  # ==========================================================================
+  # Build Docker image (without push)
+  # ==========================================================================
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: kibana-sso-proxy:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================================================
+  # Security scan
+  # ==========================================================================
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # Don't fail on vulnerabilities, just report
