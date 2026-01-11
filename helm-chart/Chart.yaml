@@ -5,8 +5,8 @@ description: |
   using any OIDC-compliant identity provider (Keycloak, Azure AD, GitHub, etc.)
 
 type: application
-version: 0.0.5
-appVersion: "0.0.5"
+version: 0.0.7
+appVersion: "0.0.7"
 
 keywords:
   - kibana
