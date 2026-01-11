@@ -21,20 +21,11 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # ==========================================================================
-  # Create Release, Build & Push Docker, Publish Helm Chart
-  # ==========================================================================
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
-      pages: write
-      id-token: write
-
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      version_num: ${{ steps.version.outputs.version_num }}
 
     steps:
       - name: Checkout
@@ -64,18 +55,14 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "type=${{ inputs.version_bump }}" >> $GITHUB_OUTPUT
           else
-            # Auto-detect from commit messages since last tag
             COMMITS=$(git log ${{ steps.previous.outputs.version }}..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
 
             if echo "$COMMITS" | grep -qiE "^(feat|feature)!:|BREAKING CHANGE"; then
               echo "type=major" >> $GITHUB_OUTPUT
-              echo "Detected: MAJOR bump"
             elif echo "$COMMITS" | grep -qiE "^(feat|feature)(\(.+\))?:"; then
               echo "type=minor" >> $GITHUB_OUTPUT
-              echo "Detected: MINOR bump"
             else
               echo "type=patch" >> $GITHUB_OUTPUT
-              echo "Detected: PATCH bump"
             fi
           fi
 
@@ -93,82 +80,34 @@ jobs:
           PATCH=${PATCH:-0}
 
           case $BUMP in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
           esac
 
-          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
-          VERSION_NUM="${MAJOR}.${MINOR}.${PATCH}"
-
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "version_num=$VERSION_NUM" >> $GITHUB_OUTPUT
-          echo "major=$MAJOR" >> $GITHUB_OUTPUT
-          echo "minor=$MINOR" >> $GITHUB_OUTPUT
-          echo "previous_version=$PREVIOUS" >> $GITHUB_OUTPUT
-
-          echo "New version: $NEW_VERSION"
+          echo "version=v${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+          echo "version_num=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+          echo "previous=$PREVIOUS" >> $GITHUB_OUTPUT
+          echo "New version: v${MAJOR}.${MINOR}.${PATCH}"
 
       # ========================================================================
-      # Generate Changelog
-      # ========================================================================
-      - name: Generate changelog
-        id: changelog
-        run: |
-          PREVIOUS="${{ steps.version.outputs.previous_version }}"
-
-          {
-            echo "## What's Changed"
-            echo ""
-            if [ "$PREVIOUS" != "v0.0.0" ]; then
-              git log ${PREVIOUS}..HEAD --pretty=format:"* %s (%h)"
-            else
-              git log --pretty=format:"* %s (%h)" -20
-            fi
-            echo ""
-            echo ""
-            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS}...${{ steps.version.outputs.version }}"
-          } > changelog.md
-
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          cat changelog.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      # ========================================================================
-      # Update Helm Chart Version
+      # Update Helm Chart & Create Tag
       # ========================================================================
       - name: Update Helm Chart version
         run: |
-          VERSION_NUM="${{ steps.version.outputs.version_num }}"
+          sed -i "s/^version:.*/version: ${{ steps.version.outputs.version_num }}/" helm-chart/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.version_num }}\"/" helm-chart/Chart.yaml
 
-          sed -i "s/^version:.*/version: ${VERSION_NUM}/" helm-chart/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"${VERSION_NUM}\"/" helm-chart/Chart.yaml
-
-          echo "Updated Chart.yaml:"
-          grep -E "^(version|appVersion):" helm-chart/Chart.yaml
-
-      - name: Commit version changes
+      - name: Commit and Tag
         run: |
           git add helm-chart/Chart.yaml
-          git commit -m "chore: release ${{ steps.version.outputs.version }}" || echo "No changes to commit"
-          git push origin main
-
-      - name: Create Git Tag
-        run: |
-          git tag ${{ steps.version.outputs.version }}
-          git push origin ${{ steps.version.outputs.version }}
+          git commit -m "chore: release ${{ steps.version.outputs.version }}" || true
+          git push origin main || true
+          git tag -f ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }} --force
 
       # ========================================================================
-      # Build and Push Docker Image to GHCR
+      # Build and Push Docker Image
       # ========================================================================
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -176,27 +115,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            # Version tags
-            type=raw,value=${{ steps.version.outputs.version }}
-            type=raw,value=${{ steps.version.outputs.version_num }}
-            type=raw,value=v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}
-            type=raw,value=v${{ steps.version.outputs.major }}
-            type=raw,value=latest
-            # Git SHA
-            type=sha,prefix=sha-
 
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
@@ -204,27 +128,87 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version_num }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            VERSION=${{ steps.version.outputs.version }}
 
       # ========================================================================
-      # Package and Publish Helm Chart
+      # Package Helm Chart
       # ========================================================================
       - name: Install Helm
         uses: azure/setup-helm@v4
-        with:
-          version: v3.13.0
 
       - name: Package Helm Chart
         run: |
           mkdir -p .helm-releases
           helm package helm-chart -d .helm-releases
-          ls -la .helm-releases/
 
+      # ========================================================================
+      # Create GitHub Release
+      # ========================================================================
+      - name: Generate Release Body
+        id: release_body
+        run: |
+          PREV="${{ steps.version.outputs.previous }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_NUM="${{ steps.version.outputs.version_num }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+
+          {
+            echo "## What's Changed"
+            echo ""
+            if [ "$PREV" != "v0.0.0" ]; then
+              git log ${PREV}..HEAD --pretty=format:"- %s (%h)" | head -50
+            else
+              git log --pretty=format:"- %s (%h)" -20
+            fi
+            echo ""
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Artifacts"
+            echo ""
+            echo "### Docker Image"
+            echo "\`\`\`bash"
+            echo "docker pull ${IMAGE}:${VERSION}"
+            echo "\`\`\`"
+            echo ""
+            echo "**Available tags:**"
+            echo "- \`${IMAGE}:${VERSION}\`"
+            echo "- \`${IMAGE}:${VERSION_NUM}\`"
+            echo "- \`${IMAGE}:latest\`"
+            echo ""
+            echo "### Helm Chart (v${VERSION_NUM})"
+            echo "\`\`\`bash"
+            echo "helm repo add kibana-sso-proxy https://nativesre.github.io/kibana-sso-proxy"
+            echo "helm repo update"
+            echo "helm install kibana-sso kibana-sso-proxy/kibana-sso-proxy --version ${VERSION_NUM}"
+            echo "\`\`\`"
+          } > release_body.md
+
+          echo "Generated release body:"
+          cat release_body.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          body_path: release_body.md
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: |
+            .helm-releases/*.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ========================================================================
+      # Publish Helm Chart to GitHub Pages
+      # ========================================================================
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -232,98 +216,16 @@ jobs:
           path: gh-pages
         continue-on-error: true
 
-      - name: Setup gh-pages directory
+      - name: Setup and Push to gh-pages
         run: |
-          if [ ! -d "gh-pages" ]; then
-            mkdir -p gh-pages
-          fi
-
-      - name: Update Helm Repository Index
-        run: |
-          cp .helm-releases/*.tgz gh-pages/
+          mkdir -p gh-pages
+          cp .helm-releases/*.tgz gh-pages/ 2>/dev/null || true
           cd gh-pages
-          helm repo index . --url https://nativesre.github.io/kibana-sso-proxy
-
-          echo "Helm repo index:"
-          cat index.yaml
-
-      - name: Push to gh-pages
-        run: |
-          cd gh-pages
+          helm repo index . --url https://nativesre.github.io/kibana-sso-proxy || true
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Release Helm chart ${{ steps.version.outputs.version }}" || echo "No changes"
-          git push origin gh-pages --force
+          git commit -m "Release ${{ steps.version.outputs.version }}" || true
+          git push origin gh-pages --force || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # ========================================================================
-      # Create GitHub Release
-      # ========================================================================
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }}
-          body: |
-            ${{ steps.changelog.outputs.changelog }}
-
-            ---
-
-            ## Docker Image
-
-            ```bash
-            # Pull the image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
-
-            # Available tags for this release:
-            # - ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
-            # - ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version_num }}
-            # - ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ```
-
-            ## Helm Chart
-
-            ```bash
-            # Add the repository (first time only)
-            helm repo add kibana-sso-proxy https://nativesre.github.io/kibana-sso-proxy
-
-            # Update and install
-            helm repo update
-            helm install kibana-sso kibana-sso-proxy/kibana-sso-proxy --version ${{ steps.version.outputs.version_num }}
-            ```
-          draft: false
-          prerelease: false
-          make_latest: true
-          generate_release_notes: false
-          files: |
-            .helm-releases/*.tgz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # ========================================================================
-      # Summary
-      # ========================================================================
-      - name: Job Summary
-        run: |
-          cat >> $GITHUB_STEP_SUMMARY << EOF
-          ## 🚀 Release ${{ steps.version.outputs.version }} Published!
-
-          ### Docker Image
-          \`\`\`
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          \`\`\`
-
-          ### Helm Chart
-          \`\`\`bash
-          helm repo add kibana-sso-proxy https://nativesre.github.io/kibana-sso-proxy
-          helm install kibana-sso kibana-sso-proxy/kibana-sso-proxy
-          \`\`\`
-
-          ### Links
-          - 📦 [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }})
-          - 🐳 [Docker Image](https://${{ env.REGISTRY }}/${{ env.IMAGE_NAME }})
-          - ⎈ [Helm Repository](https://nativesre.github.io/kibana-sso-proxy)
-          EOF
