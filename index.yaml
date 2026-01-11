@@ -2,8 +2,36 @@ apiVersion: v1
 entries:
   kibana-sso-proxy:
   - apiVersion: v2
+    appVersion: 0.0.8
+    created: "2026-01-11T07:56:14.182922929Z"
+    description: 'A Helm chart for Kibana SSO Proxy - enables SSO authentication for
+      Kibana using any OIDC-compliant identity provider (Keycloak, Azure AD, GitHub,
+      etc.) '
+    digest: 1697dc5eb03f8da88f8be3ba44d2a9c47c19edcb191e0b3ba777a889c5804853
+    home: https://github.com/nativesre/kibana-sso-proxy
+    keywords:
+    - kibana
+    - sso
+    - oauth
+    - oidc
+    - keycloak
+    - azure-ad
+    - github
+    - elasticsearch
+    - authentication
+    maintainers:
+    - email: your.email@example.com
+      name: Your Name
+    name: kibana-sso-proxy
+    sources:
+    - https://github.com/nativesre/kibana-sso-proxy
+    type: application
+    urls:
+    - https://nativesre.github.io/kibana-sso-proxy/kibana-sso-proxy-0.0.8.tgz
+    version: 0.0.8
+  - apiVersion: v2
     appVersion: 0.0.7
-    created: "2026-01-11T07:35:51.572145117Z"
+    created: "2026-01-11T07:56:14.18225391Z"
     description: 'A Helm chart for Kibana SSO Proxy - enables SSO authentication for
       Kibana using any OIDC-compliant identity provider (Keycloak, Azure AD, GitHub,
       etc.) '
@@ -29,4 +57,4 @@ entries:
     urls:
     - https://nativesre.github.io/kibana-sso-proxy/kibana-sso-proxy-0.0.7.tgz
     version: 0.0.7
-generated: "2026-01-11T07:35:51.571337308Z"
+generated: "2026-01-11T07:56:14.181389716Z"
