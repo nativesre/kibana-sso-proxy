@@ -1,0 +1,298 @@
+# =============================================================================
+# Kibana SSO Proxy - Helm Chart Values
+# =============================================================================
+# This chart deploys the Kibana SSO Proxy which enables SSO authentication
+# for Kibana using OIDC providers (Keycloak, Azure AD, GitHub, or any OIDC).
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Deployment Configuration
+# -----------------------------------------------------------------------------
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/nativesre/kibana-sso-proxy
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to Chart.appVersion
+
+imagePullSecrets: []
+# - name: my-registry-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+# -----------------------------------------------------------------------------
+# Service Account
+# -----------------------------------------------------------------------------
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+# -----------------------------------------------------------------------------
+# Pod Configuration
+# -----------------------------------------------------------------------------
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+
+service:
+  type: ClusterIP
+  port: 80
+  containerPort: 3000
+
+# -----------------------------------------------------------------------------
+# Ingress Configuration
+# -----------------------------------------------------------------------------
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: kibana-sso.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: kibana-sso-tls
+  #    hosts:
+  #      - kibana-sso.example.com
+
+# -----------------------------------------------------------------------------
+# Resource Limits
+# -----------------------------------------------------------------------------
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+# -----------------------------------------------------------------------------
+# Health Probes
+# -----------------------------------------------------------------------------
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -----------------------------------------------------------------------------
+# Autoscaling
+# -----------------------------------------------------------------------------
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# -----------------------------------------------------------------------------
+# Additional Configuration
+# -----------------------------------------------------------------------------
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+volumes: []
+volumeMounts: []
+
+# =============================================================================
+# Application Configuration
+# =============================================================================
+# Configure the SSO proxy using environment variables.
+# Sensitive values should be provided via existingSecret or secrets.
+# =============================================================================
+
+# Use an existing Kubernetes secret for sensitive values
+# The secret should contain keys matching the env var names (e.g., OIDC_CLIENT_SECRET)
+existingSecret: ""
+
+# Non-sensitive configuration (stored in ConfigMap)
+config:
+  # -------------------------------------------------------------------------
+  # OIDC Provider Configuration
+  # -------------------------------------------------------------------------
+  # Provider type: keycloak, azure, github, or generic
+  OIDC_PROVIDER: "keycloak"
+
+  # Common OIDC settings
+  OIDC_CLIENT_ID: ""
+
+  # Keycloak-specific settings (when OIDC_PROVIDER=keycloak)
+  KEYCLOAK_SERVER_URL: ""
+  KEYCLOAK_REALM: ""
+
+  # Azure AD-specific settings (when OIDC_PROVIDER=azure)
+  # AZURE_TENANT_ID: ""
+  # AZURE_USE_GROUPS: "false"
+
+  # GitHub-specific settings (when OIDC_PROVIDER=github)
+  # GITHUB_ORG: ""
+
+  # Generic OIDC settings (when OIDC_PROVIDER=generic)
+  # OIDC_ISSUER_URL: ""
+  # OIDC_SCOPES: "openid profile email"
+  # OIDC_USERNAME_CLAIM: "preferred_username"
+  # OIDC_ROLES_CLAIM: "roles"
+
+  # -------------------------------------------------------------------------
+  # Elasticsearch Configuration
+  # -------------------------------------------------------------------------
+  ELASTICSEARCH_URL: "http://elasticsearch:9200"
+  ES_ADMIN_USER: "elastic"
+
+  # -------------------------------------------------------------------------
+  # Role Mapping Configuration
+  # -------------------------------------------------------------------------
+  # Direct mapping of IdP roles to ES roles (JSON format)
+  # Supports regex patterns with "regex:" prefix
+  # ES_ROLE_MAPPING: '{"admin": ["superuser"], "editor": ["editor"], "regex:team-.*": ["viewer"]}'
+
+  # Default roles when no mapping matches (JSON array)
+  # ES_DEFAULT_ROLES: '["viewer"]'
+
+  # Pass unmapped IdP roles directly to Elasticsearch
+  # ES_ROLE_PASSTHROUGH: "false"
+
+  # Roles always added regardless of mapping (JSON array)
+  # ES_ROLE_ALWAYS_INCLUDE: '["kibana_user"]'
+
+  # Strip prefix from IdP roles before mapping (e.g., "app_" strips "app_admin" to "admin")
+  # ES_ROLE_PREFIX_STRIP: ""
+
+  # Strip suffix from IdP roles before mapping
+  # ES_ROLE_SUFFIX_STRIP: ""
+
+  # Add prefix to all mapped ES roles (e.g., "sso_" turns "admin" into "sso_admin")
+  # ES_ROLE_PREFIX_ADD: ""
+
+  # Case-sensitive role matching (default: false)
+  # ES_ROLE_CASE_SENSITIVE: "false"
+
+  # -------------------------------------------------------------------------
+  # Kibana Configuration
+  # -------------------------------------------------------------------------
+  KIBANA_URL: "http://kibana:5601"
+  KIBANA_PUBLIC_URL: "https://kibana.example.com"
+  KIBANA_BASE_PATH: ""
+
+  # -------------------------------------------------------------------------
+  # Proxy Configuration
+  # -------------------------------------------------------------------------
+  PUBLIC_URL: "https://kibana-sso.example.com"
+  LOG_LEVEL: "INFO"
+  SSL_VERIFY: "true"
+
+# Sensitive configuration (stored in Secret)
+# Only used if existingSecret is not set
+secrets:
+  OIDC_CLIENT_SECRET: ""
+  ES_ADMIN_PASSWORD: ""
+  SESSION_SECRET: ""  # Generate with: openssl rand -hex 32
+
+# =============================================================================
+# Example Configurations
+# =============================================================================
+#
+# Keycloak Example:
+# -----------------
+# config:
+#   OIDC_PROVIDER: "keycloak"
+#   OIDC_CLIENT_ID: "kibana"
+#   KEYCLOAK_SERVER_URL: "https://keycloak.example.com"
+#   KEYCLOAK_REALM: "master"
+#   ELASTICSEARCH_URL: "https://elasticsearch:9200"
+#   ES_ADMIN_USER: "elastic"
+#   KIBANA_URL: "http://kibana:5601"
+#   KIBANA_PUBLIC_URL: "https://kibana.example.com"
+#   PUBLIC_URL: "https://kibana.example.com"
+#
+# secrets:
+#   OIDC_CLIENT_SECRET: "your-client-secret"
+#   ES_ADMIN_PASSWORD: "your-es-password"
+#   SESSION_SECRET: "your-random-secret"
+#
+# Azure AD Example:
+# -----------------
+# config:
+#   OIDC_PROVIDER: "azure"
+#   OIDC_CLIENT_ID: "your-app-client-id"
+#   AZURE_TENANT_ID: "your-tenant-id"
+#   AZURE_USE_GROUPS: "true"
+#   AZURE_GROUP_ROLE_MAPPING: '{"group-id-1": "admin", "group-id-2": "viewer"}'
+#
+# GitHub Example:
+# ---------------
+# config:
+#   OIDC_PROVIDER: "github"
+#   OIDC_CLIENT_ID: "your-github-client-id"
+#   GITHUB_ORG: "your-organization"
+#   GITHUB_TEAM_ROLE_MAPPING: '{"admins": "admin", "developers": "editor"}'
+#
+# Generic OIDC Example:
+# ---------------------
+# config:
+#   OIDC_PROVIDER: "generic"
+#   OIDC_CLIENT_ID: "kibana-sso"
+#   OIDC_ISSUER_URL: "https://your-idp.example.com/realms/master"
+#   OIDC_SCOPES: "openid profile email"
+#   OIDC_USERNAME_CLAIM: "preferred_username"
+#   OIDC_ROLES_CLAIM: "roles"
+#
+# Advanced Role Mapping Example:
+# ------------------------------
+# config:
+#   # Direct mapping with regex support
+#   ES_ROLE_MAPPING: '{"admin": ["superuser"], "regex:team-.*": ["team_member"], "viewer": ["viewer"]}'
+#   ES_DEFAULT_ROLES: '["viewer"]'
+#   # Always give users kibana_user role for Kibana access
+#   ES_ROLE_ALWAYS_INCLUDE: '["kibana_user"]'
+#   # Strip "myapp_" prefix from IdP roles before mapping
+#   ES_ROLE_PREFIX_STRIP: "myapp_"
+#   # Add "sso_" prefix to all ES roles
+#   ES_ROLE_PREFIX_ADD: "sso_"
+#
+# Role Passthrough Example (when IdP roles match ES roles):
+# ---------------------------------------------------------
+# config:
+#   ES_ROLE_PASSTHROUGH: "true"
+#   ES_ROLE_ALWAYS_INCLUDE: '["kibana_user"]'
