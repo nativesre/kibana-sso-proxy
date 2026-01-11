@@ -207,7 +207,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ========================================================================
-      # Publish Helm Chart to GitHub Pages
+      # Publish Docs & Helm Chart to GitHub Pages
       # ========================================================================
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -218,10 +218,21 @@ jobs:
 
       - name: Setup and Push to gh-pages
         run: |
+          # Initialize gh-pages if needed
           mkdir -p gh-pages
+
+          # Copy documentation
+          cp -r docs/* gh-pages/ 2>/dev/null || true
+
+          # Copy Helm chart
           cp .helm-releases/*.tgz gh-pages/ 2>/dev/null || true
+
           cd gh-pages
+
+          # Generate Helm repo index
           helm repo index . --url https://nativesre.github.io/kibana-sso-proxy || true
+
+          # Commit and push
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .

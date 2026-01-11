@@ -2,6 +2,8 @@
 
 A lightweight authentication proxy that enables Single Sign-On (SSO) for Kibana using any OIDC-compliant identity provider. Works with Elasticsearch's **free/basic license**.
 
+**[Documentation](https://nativesre.github.io/kibana-sso-proxy)** | **[Helm Chart](https://nativesre.github.io/kibana-sso-proxy)** | **[Docker Image](https://ghcr.io/nativesre/kibana-sso-proxy)**
+
 ## Features
 
 - **Multiple Identity Providers**: Supports Keycloak, Azure AD, GitHub, and any generic OIDC provider
