@@ -8,11 +8,11 @@ Supported providers:
 - Generic OIDC (any OpenID Connect compliant provider)
 """
 
-from providers.base import OIDCProvider
-from providers.keycloak import KeycloakProvider
-from providers.azure import AzureADProvider
-from providers.github import GitHubProvider
-from providers.generic import GenericOIDCProvider
+from app.providers.base import OIDCProvider
+from app.providers.keycloak import KeycloakProvider
+from app.providers.azure import AzureADProvider
+from app.providers.github import GitHubProvider
+from app.providers.generic import GenericOIDCProvider
 
 __all__ = [
     "OIDCProvider",

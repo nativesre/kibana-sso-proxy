@@ -5,9 +5,9 @@
 # =============================================================================
 
 # Build stage - install dependencies
-FROM python:3.14-slim as builder
+FROM python:3.12-slim as builder
 
-WORKDIR /app
+WORKDIR /build
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -26,30 +26,26 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # =============================================================================
 # Production stage - minimal runtime image
 # =============================================================================
-FROM python:3.14-slim
+FROM python:3.12-slim
 
 # Labels
 LABEL org.opencontainers.image.title="Kibana SSO Proxy"
 LABEL org.opencontainers.image.description="SSO authentication proxy for Kibana using OIDC providers"
 LABEL org.opencontainers.image.source="https://github.com/nativesre/kibana-sso-proxy"
-LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.licenses="GPL-3.0"
 
 # Create non-root user
 RUN groupadd --gid 1000 appgroup && \
     useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
 
-WORKDIR /app
+WORKDIR /opt/kibana-sso-proxy
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
-COPY --chown=appuser:appgroup app.py .
-COPY --chown=appuser:appgroup config/ ./config/
-COPY --chown=appuser:appgroup providers/ ./providers/
-COPY --chown=appuser:appgroup services/ ./services/
-COPY --chown=appuser:appgroup utils/ ./utils/
+COPY --chown=appuser:appgroup app/ ./app/
 
 # Switch to non-root user
 USER appuser
@@ -70,4 +66,4 @@ CMD ["gunicorn", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \
      "--capture-output", \
-     "app:app"]
+     "app.main:app"]

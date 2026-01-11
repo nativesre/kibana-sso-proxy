@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -199,7 +199,7 @@ jobs:
             type=sha,prefix=sha-
 
       - name: Build and Push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -226,7 +226,7 @@ jobs:
           ls -la .helm-releases/
 
       - name: Checkout gh-pages
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: gh-pages
@@ -295,6 +295,8 @@ jobs:
             ```
           draft: false
           prerelease: false
+          make_latest: true
+          generate_release_notes: false
           files: |
             .helm-releases/*.tgz
         env:

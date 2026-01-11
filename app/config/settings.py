@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from utils.logger import logger
+from app.utils.logger import logger
 
 
 @dataclass

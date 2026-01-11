@@ -332,21 +332,24 @@ OIDC_ISSUER_URL=https://your-idp.example.com
 
 ```
 kibana-sso-proxy/
-├── app.py                 # Main Flask application
-├── config/
-│   └── settings.py        # Configuration management
-├── providers/
-│   ├── base.py            # Abstract OIDC provider
-│   ├── keycloak.py        # Keycloak implementation
-│   ├── azure.py           # Azure AD implementation
-│   ├── github.py          # GitHub implementation
-│   └── generic.py         # Generic OIDC implementation
-├── services/
-│   ├── elasticsearch.py   # Elasticsearch user management
-│   └── kibana.py          # Kibana session management
-├── utils/
-│   └── logger.py          # Structured logging
-├── helm-chart/            # Kubernetes Helm chart
+├── app/                       # Application package
+│   ├── __init__.py
+│   ├── main.py                # Flask application & routes
+│   ├── config/
+│   │   └── settings.py        # Configuration management
+│   ├── providers/
+│   │   ├── base.py            # Abstract OIDC provider
+│   │   ├── keycloak.py        # Keycloak implementation
+│   │   ├── azure.py           # Azure AD implementation
+│   │   ├── github.py          # GitHub implementation
+│   │   └── generic.py         # Generic OIDC implementation
+│   ├── services/
+│   │   ├── elasticsearch.py   # Elasticsearch user management
+│   │   └── kibana.py          # Kibana session management
+│   └── utils/
+│       └── logger.py          # Structured logging
+├── helm-chart/                # Kubernetes Helm chart
+├── .github/                   # GitHub Actions workflows
 ├── Dockerfile
 └── requirements.txt
 ```

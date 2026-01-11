@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -30,15 +30,15 @@ jobs:
           pip install black isort mypy
 
       - name: Check formatting with Black
-        run: black --check --diff .
+        run: black --check --diff app/
         continue-on-error: true
 
       - name: Check imports with isort
-        run: isort --check --diff .
+        run: isort --check --diff app/
         continue-on-error: true
 
       - name: Type check with mypy
-        run: mypy --ignore-missing-imports --no-error-summary .
+        run: mypy --ignore-missing-imports --no-error-summary app/
         continue-on-error: true
 
   # ==========================================================================
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -73,13 +73,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: false
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
