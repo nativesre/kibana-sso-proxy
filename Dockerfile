@@ -5,7 +5,7 @@
 # =============================================================================
 
 # Build stage - install dependencies
-FROM python:3.12-slim as builder
+FROM python:3.14-slim as builder
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # =============================================================================
 # Production stage - minimal runtime image
 # =============================================================================
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Labels
 LABEL org.opencontainers.image.title="Kibana SSO Proxy"
