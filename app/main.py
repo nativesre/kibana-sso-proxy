@@ -17,10 +17,10 @@ if os.environ.get("SSL_VERIFY", "true").lower() == "false":
 from flask import Flask, redirect, request, session, jsonify, make_response
 from authlib.integrations.flask_client import OAuth
 
-from config import load_config
-from providers import get_provider
-from services import ElasticsearchService, KibanaService
-from utils.logger import logger, setup_logger
+from app.config import load_config
+from app.providers import get_provider
+from app.services import ElasticsearchService, KibanaService
+from app.utils.logger import logger, setup_logger
 
 
 # =============================================================================

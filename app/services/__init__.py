@@ -6,7 +6,7 @@ Services handle integration with external systems:
 - Kibana: Session management
 """
 
-from services.elasticsearch import ElasticsearchService
-from services.kibana import KibanaService
+from app.services.elasticsearch import ElasticsearchService
+from app.services.kibana import KibanaService
 
 __all__ = ["ElasticsearchService", "KibanaService"]

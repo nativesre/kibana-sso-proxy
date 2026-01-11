@@ -9,8 +9,8 @@ import re
 from typing import Tuple
 import requests
 
-from config.settings import ElasticsearchConfig
-from utils.logger import logger
+from app.config.settings import ElasticsearchConfig
+from app.utils.logger import logger
 
 
 class RoleMapper:

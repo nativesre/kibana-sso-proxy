@@ -9,8 +9,8 @@ from urllib.parse import urlencode
 
 from authlib.integrations.flask_client import OAuth
 
-from providers.base import OIDCProvider, UserInfo
-from utils.logger import logger
+from app.providers.base import OIDCProvider, UserInfo
+from app.utils.logger import logger
 
 
 class AzureADProvider(OIDCProvider):

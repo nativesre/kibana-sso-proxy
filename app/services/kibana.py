@@ -6,8 +6,8 @@ Handles obtaining and validating Kibana session cookies.
 
 import requests
 
-from config.settings import KibanaConfig
-from utils.logger import logger
+from app.config.settings import KibanaConfig
+from app.utils.logger import logger
 
 
 class KibanaService:
